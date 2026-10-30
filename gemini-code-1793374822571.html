@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate VR Mod Studio - APK Injector & Block Coder</title>
+    <!-- Three.js & Controls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --header-bg: #2d2d2d;
+            --accent: #007acc;
+            --accent-hover: #0098ff;
+            --text: #e0e0e0;
+            --border: #333333;
+            --block-event: #d97706;
+            --block-action: #2563eb;
+            --block-value: #16a34a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 11px;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Toolbar */
+        header {
+            height: 42px;
+            background: var(--header-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title {
+            font-weight: bold;
+            color: #ffffff;
+            font-size: 13px;
+        }
+
+        .btn {
+            background: #3c3c3c;
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn:hover { background: #4a4a4a; color: #fff; }
+        .btn.primary { background: var(--accent); color: white; border: none; }
+        .btn.primary:hover { background: var(--accent-hover); }
+
+        /* Workspace Grid Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 240px 1fr 280px;
+            grid-template-rows: 1fr 260px;
+            flex: 1;
+            height: calc(100vh - 42px);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--header-bg);
+            padding: 6px 10px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+
+        /* Sidebar Tabs */
+        .tabs {
+            display: flex;
+            background: #161616;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 6px;
+            text-align: center;
+            cursor: pointer;
+            background: #1a1a1a;
+            color: #888;
+        }
+
+        .tab.active { background: var(--panel-bg); color: #fff; border-top: 2px solid var(--accent); }
+
+        .list-container {
+            list-style: none;
+            padding: 6px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .list-container li {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin-bottom: 3px;
+            background: #252526;
+            border: 1px solid #333;
+        }
+
+        .list-container li:hover { background: #2a2d2e; border-color: var(--accent); }
+        .list-container li.selected { background: var(--accent); color: white; }
+
+        /* APK Upload Box */
+        .apk-dropzone {
+            border: 2px dashed #555;
+            padding: 15px;
+            text-align: center;
+            margin: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #161616;
+            transition: 0.2s;
+        }
+        .apk-dropzone:hover { border-color: var(--accent); background: #1c1c1c; }
+
+        /* 3D Viewport & Movable VR Mod Menu Overlay */
+        #viewport-container {
+            position: relative;
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        #canvas-3d {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Floating Interactive VR Mod Menu */
+        #vr-mod-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 210px;
+            background: rgba(25, 25, 25, 0.9);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            z-index: 10;
+        }
+
+        .mod-menu-header {
+            background: var(--accent);
+            color: white;
+            padding: 6px 10px;
+            font-weight: bold;
+            cursor: move;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .mod-menu-body {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mod-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #2d2d2d;
+            padding: 6px 8px;
+            border-radius: 4px;
+        }
+
+        /* Scratch-style Block Coder Panel (Bottom) */
+        #block-coder {
+            grid-column: 1 / span 2;
+            grid-row: 2;
+            position: relative;
+            background: #141414;
+            background-image: radial-gradient(#262626 1.5px, transparent 1.5px);
+            background-size: 22px 22px;
+            overflow: auto;
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .toolbox-palette {
+            width: 180px;
+            background: #1a1a1a;
+            border-right: 1px solid var(--border);
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .code-canvas {
+            flex: 1;
+            position: relative;
+            min-height: 100%;
+        }
+
+        .code-block {
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: grab;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .block-event { background: var(--block-event); border-left: 5px solid #ffaa00; }
+        .block-action { background: var(--block-action); border-left: 5px solid #60a5fa; }
+        .block-value { background: var(--block-value); border-left: 5px solid #4ade80; }
+
+        /* Inspector Panel */
+        #inspector {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .prop-section {
+            margin-bottom: 12px;
+            background: #252526;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+
+        .prop-section h4 {
+            margin-bottom: 8px;
+            color: #4ec9b0;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .prop-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .prop-row input, .prop-row select {
+            width: 120px;
+            background: #111;
+            border: 1px solid #444;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Toolbar -->
+    <header>
+        <span class="title">⚡ APK Modder & Block Studio</span>
+        <button class="btn primary" onclick="togglePlayMode()" id="play-btn">▶ Test VR Mod</button>
+        <div style="width: 1px; height: 20px; background: #444;"></div>
+        <button class="btn" onclick="addPrimitive('cube')">+ Spawn Cube</button>
+        <button class="btn" onclick="addPrimitive('sphere')">+ Energy Orb</button>
+        <button class="btn" onclick="addPrimitive('weapon')">+ VR Blaster</button>
+        <div style="flex-grow: 1;"></div>
+        <div id="vr-button-container"></div>
+    </header>
+
+    <!-- Workspace Grid -->
+    <div class="workspace">
+        
+        <!-- Left Panel: Hierarchy & APK Injector -->
+        <div class="panel">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('hierarchy')">Hierarchy</div>
+                <div class="tab" onclick="switchTab('apk')">APK Injector</div>
+            </div>
+            
+            <ul id="hierarchy-list" class="list-container"></ul>
+            
+            <div id="apk-panel" style="display:none; flex:1; display:flex; flex-direction:column;">
+                <div class="apk-dropzone" onclick="document.getElementById('apk-file-input').click()">
+                    <b>📱 Drop or Select APK</b>
+                    <p style="color:#888; margin-top:5px;">Inject Quest / Android game APK to extract assets & classes.dex</p>
+                    <input type="file" id="apk-file-input" style="display:none" onchange="handleAPKUpload(event)">
+                </div>
+                <div id="apk-info" style="padding: 10px; color: #4ec9b0; font-family: monospace; font-size: 10px;"></div>
+            </div>
+        </div>
+
+        <!-- Center 3D Viewport & Movable Mod Menu -->
+        <div id="viewport-container">
+            <canvas id="canvas-3d"></canvas>
+
+            <!-- Movable In-Game VR Mod Menu Overlay -->
+            <div id="vr-mod-menu">
+                <div class="mod-menu-header" id="menu-drag-handle">
+                    <span>🎮 VR Cheat Mod Menu</span>
+                    <span style="cursor:pointer;" onclick="toggleMenuCollapse()">_</span>
+                </div>
+                <div class="mod-menu-body" id="menu-body">
+                    <div class="mod-toggle">
+                        <span>⚡ 2x Speed Hack</span>
+                        <input type="checkbox" id="mod-speed" onchange="applyModState()">
+                    </div>
+                    <div class="mod-toggle">
+                        <span>🛡️ God Mode (HP)</span>
+                        <input type="checkbox" id="mod-god" onchange="applyModState()" checked>
+                    </div>
+                    <div class="mod-toggle">
+                        <span>♾️ Infinite Ammo</span>
+                        <input type="checkbox" id="mod-ammo" onchange="applyModState()">
+                    </div>
+                    <div class="mod-toggle">
+                        <span>🛸 Noclip Fly Mode</span>
+                        <input type="checkbox" id="mod-fly" onchange="applyModState()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel: Scratch-Style Block Coder -->
+        <div class="panel" id="block-coder">
+            <div class="toolbox-palette">
+                <div style="font-weight:bold; color:#aaa; margin-bottom:5px;">Code Blocks</div>
+                <div class="code-block block-event" draggable="true">⚡ When Trigger Pulled</div>
+                <div class="code-block block-event" draggable="true">🎯 On Enemy Hit</div>
+                <div class="code-block block-action" draggable="true">🚀 Set Player Speed (2x)</div>
+                <div class="code-block block-action" draggable="true">💥 Spawn Explosion</div>
+                <div class="code-block block-value" draggable="true">🔢 Grav Multiplier [0.5]</div>
+            </div>
+            
+            <div class="code-canvas" id="canvas-blocks">
+                <div style="position: absolute; left: 20px; top: 20px;" class="code-block block-event">
+                    ⚡ When VR Trigger Pulled (Right Controller)
+                </div>
+                <div style="position: absolute; left: 20px; top: 75px;" class="code-block block-action">
+                    🚀 Set Speed Multiplier = 2.0x
+                </div>
+                <div style="position: absolute; left: 20px; top: 130px;" class="code-block block-action">
+                    💥 Spawn Particle Effect [Portal Burst]
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Inspector -->
+        <div class="panel" id="inspector">
+            <div class="panel-header">Inspector</div>
+            <div id="inspector-content" style="padding: 10px;">
+                <p style="color: #777; text-align: center; margin-top: 20px;">Select an object in the viewport or hierarchy.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. THREE.JS ENGINE SETUP ---
+        const container = document.getElementById('viewport-container');
+        const canvas = document.getElementById('canvas-3d');
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x121212);
+        scene.fog = new THREE.FogExp2(0x121212, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.xr.enabled = true;
+
+        document.getElementById('vr-button-container').appendChild(VRButton.createButton(renderer));
+
+        const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+        orbitControls.target.set(0, 1, 0);
+        orbitControls.update();
+
+        const transformControls = new THREE.TransformControls(camera, renderer.domElement);
+        transformControls.size = 0.75;
+        scene.add(transformControls);
+
+        transformControls.addEventListener('dragging-changed', (event) => {
+            orbitControls.enabled = !event.value;
+        });
+
+        // Lighting & Grid
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        const grid = new THREE.GridHelper(20, 20, 0x007acc, 0x262626);
+        grid.position.y = -0.01;
+        scene.add(grid);
+
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 }));
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // --- 2. SCENE OBJECTS & PRIMITIVES ---
+        let sceneObjects = [];
+        let selectedObject = null;
+        let isPlaying = false;
+        let playerSpeedMultiplier = 1.0;
+
+        function addPrimitive(type) {
+            let mesh;
+            let mat = new THREE.MeshStandardMaterial({ color: 0x007acc, roughness: 0.3 });
+
+            if (type === 'cube') {
+                mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), mat);
+                mesh.name = "Modded_Cube_" + (sceneObjects.length + 1);
+            } else if (type === 'sphere') {
+                mat.color.setHex(0xf59e0b);
+                mesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 32, 32), mat);
+                mesh.name = "Energy_Orb_" + (sceneObjects.length + 1);
+            } else if (type === 'weapon') {
+                mat.color.setHex(0x60a5fa);
+                mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.8), mat);
+                mesh.name = "VR_Blaster_" + (sceneObjects.length + 1);
+            }
+
+            mesh.position.set((Math.random() - 0.5) * 3, 1, (Math.random() - 0.5) * 3);
+            mesh.castShadow = true;
+            mesh.userData = { grabbable: true, physics: 'Dynamic', hp: 100 };
+
+            scene.add(mesh);
+            sceneObjects.push(mesh);
+            updateHierarchy();
+            selectObject(mesh);
+        }
+
+        function updateHierarchy() {
+            const list = document.getElementById('hierarchy-list');
+            list.innerHTML = '';
+            sceneObjects.forEach(obj => {
+                const li = document.createElement('li');
+                li.innerText = obj.name;
+                if (selectedObject === obj) li.classList.add('selected');
+                li.onclick = () => selectObject(obj);
+                list.appendChild(li);
+            });
+        }
+
+        function selectObject(obj) {
+            selectedObject = obj;
+            if (obj) transformControls.attach(obj);
+            else transformControls.detach();
+            updateHierarchy();
+            updateInspector();
+        }
+
+        // Mouse Raycasting
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            if (event.target !== canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / canvas.clientWidth) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / canvas.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sceneObjects);
+            if (intersects.length > 0) selectObject(intersects[0].object);
+        });
+
+        // --- 3. APK INJECTOR SIMULATOR ---
+        function handleAPKUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const infoBox = document.getElementById('apk-info');
+            infoBox.innerHTML = `
+                📂 Loading APK: ${file.name}<br>
+                📦 Size: ${(file.size / (1024*1024)).toFixed(2)} MB<br>
+                ⚙️ Unpacking classes.dex...<br>
+                🔓 Extracting libil2cpp.so & assets...<br>
+                <span style="color:#4ade80;">✔ APK Decompiled Successfully!</span>
+            `;
+
+            // Inject sample prefabs from APK into scene
+            setTimeout(() => {
+                addPrimitive('cube');
+                sceneObjects[sceneObjects.length - 1].name = file.name.replace('.apk', '') + "_PlayerMod";
+                updateHierarchy();
+            }, 800);
+        }
+
+        // --- 4. MOVABLE VR MOD MENU INTERACTION ---
+        const menu = document.getElementById('vr-mod-menu');
+        const header = document.getElementById('menu-drag-handle');
+        let isDraggingMenu = false, startX, startY;
+
+        header.onmousedown = (e) => {
+            isDraggingMenu = true;
+            startX = e.clientX - menu.offsetLeft;
+            startY = e.clientY - menu.offsetTop;
+            e.preventDefault();
+        };
+
+        window.onmousemove = (e) => {
+            if (!isDraggingMenu) return;
+            menu.style.left = (e.clientX - startX) + 'px';
+            menu.style.top = (e.clientY - startY) + 'px';
+            menu.style.right = 'auto';
+        };
+
+        window.onmouseup = () => { isDraggingMenu = false; };
+
+        function toggleMenuCollapse() {
+            const body = document.getElementById('menu-body');
+            body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        function applyModState() {
+            const is2x = document.getElementById('mod-speed').checked;
+            playerSpeedMultiplier = is2x ? 2.0 : 1.0;
+        }
+
+        // --- 5. TABS & INSPECTOR ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (tabName === 'hierarchy') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('hierarchy-list').style.display = 'block';
+                document.getElementById('apk-panel').style.display = 'none';
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('hierarchy-list').style.display = 'none';
+                document.getElementById('apk-panel').style.display = 'flex';
+            }
+        }
+
+        function updateInspector() {
+            const container = document.getElementById('inspector-content');
+            if (!selectedObject) {
+                container.innerHTML = `<p style="color: #777; text-align: center; margin-top: 20px;">Select an object in the viewport or hierarchy.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="prop-section">
+                    <h4>Object Properties</h4>
+                    <div class="prop-row">
+                        <span>Name</span>
+                        <input type="text" value="${selectedObject.name}" onchange="selectedObject.name = this.value; updateHierarchy();">
+                    </div>
+                </div>
+                <div class="prop-section">
+                    <h4>Transform</h4>
+                    <div class="prop-row">
+                        <span>Position X</span>
+                        <input type="number" step="0.1" value="${selectedObject.position.x.toFixed(2)}" onchange="selectedObject.position.x = parseFloat(this.value)">
+                    </div>
+                    <div class="prop-row">
+                        <span>Position Y</span>
+                        <input type="number" step="0.1" value="${selectedObject.position.y.toFixed(2)}" onchange="selectedObject.position.y = parseFloat(this.value)">
+                    </div>
+                </div>
+            `;
+        }
+
+        function togglePlayMode() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('play-btn');
+            if (isPlaying) {
+                btn.innerText = "⏹ Stop Simulation";
+                btn.style.background = "#d9534f";
+                transformControls.detach();
+            } else {
+                btn.innerText = "▶ Test VR Mod";
+                btn.style.background = "var(--accent)";
+                if (selectedObject) transformControls.attach(selectedObject);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Initialize default scene object
+        addPrimitive('cube');
+
+        // Main Loop
+        renderer.setAnimationLoop(() => {
+            if (isPlaying) {
+                sceneObjects.forEach((obj, idx) => {
+                    obj.rotation.y += 0.02 * playerSpeedMultiplier;
+                });
+            }
+            renderer.render(scene, camera);
+        });
+    </script>
+</body>
+</html>
