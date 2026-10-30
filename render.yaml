@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: vr-mod-studio
+    name: vr-mod-studio-pro
     env: node
     plan: free
     buildCommand: npm install
