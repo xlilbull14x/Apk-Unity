@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise VR Mod Studio Pro</title>
+    <title>VR Game Creator Studio (Unity Edition)</title>
     <!-- Three.js & Controls CDNs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -15,99 +15,79 @@
 
     <!-- Top Toolbar -->
     <header>
-        <span class="title">⚡ Enterprise VR Mod Studio Pro</span>
-        <button class="btn primary" onclick="togglePlayMode()" id="play-btn">▶ Test Simulation</button>
+        <span class="title">🌌 VR Game Creator (Unity-Engine)</span>
+        <button class="btn primary" onclick="openGameWizard()" id="play-btn">▶ Test Game & Movement</button>
         <div class="separator"></div>
-        <button class="btn" onclick="addPrimitive('cube')">+ Spawn Cube</button>
-        <button class="btn" onclick="addPrimitive('sphere')">+ Energy Orb</button>
-        <button class="btn" onclick="addPrimitive('weapon')">+ VR Blaster</button>
+        <button class="btn" onclick="spawnObject('cube')">+ Box (Auto-Collider)</button>
+        <button class="btn" onclick="spawnObject('sphere')">+ Sphere (Gravity)</button>
+        <button class="btn" onclick="spawnObject('platform')">+ Platform</button>
         <div style="flex-grow: 1;"></div>
         <div id="vr-button-container"></div>
     </header>
 
-    <!-- Workspace Grid Layout -->
+    <!-- Workspace Grid -->
     <div class="workspace">
         
-        <!-- Left Sidebar: Hierarchy / APK Injector -->
+        <!-- Left Sidebar: Hierarchy & Asset Uploader -->
         <div class="panel">
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('hierarchy')">Hierarchy</div>
-                <div class="tab" onclick="switchTab('apk')">APK Decompiler</div>
+                <div class="tab" onclick="switchTab('assets')">Upload Models</div>
             </div>
             
             <ul id="hierarchy-list" class="list-container"></ul>
             
-            <div id="apk-panel" class="apk-container" style="display:none;">
-                <div class="apk-dropzone" onclick="document.getElementById('apk-file-input').click()">
-                    <b>📱 Upload Quest APK</b>
-                    <p style="color:#888; margin-top:5px;">Click to inject binary file for backend asset parsing</p>
-                    <input type="file" id="apk-file-input" style="display:none" onchange="uploadAPK(event)">
+            <div id="asset-panel" class="asset-container" style="display:none;">
+                <div class="dropzone" onclick="document.getElementById('model-file-input').click()">
+                    <b>📁 Upload 3D Model (.gltf / .obj)</b>
+                    <p style="color:#888; margin-top:4px;">Click to import custom VR assets</p>
+                    <input type="file" id="model-file-input" style="display:none" onchange="uploadModel(event)">
                 </div>
-                <div id="apk-status-log"></div>
+                <div id="upload-status" style="padding: 10px; font-size: 10px; color: #4ec9b0;"></div>
             </div>
         </div>
 
-        <!-- Center 3D Viewport & Movable VR Cheat Menu -->
+        <!-- Center 3D Viewport -->
         <div id="viewport-container">
             <canvas id="canvas-3d"></canvas>
-            
             <div class="viewport-overlay">
-                <b>Desktop Controls:</b> Click to select | Drag gizmo to transform | WASD/Mouse to Orbit
-            </div>
-
-            <!-- Movable VR In-Game Cheat Menu Overlay -->
-            <div id="vr-mod-menu">
-                <div class="mod-menu-header" id="menu-drag-handle">
-                    <span>🎮 VR Cheat Menu UI</span>
-                    <span style="cursor:pointer;" onclick="toggleMenuCollapse()">_</span>
-                </div>
-                <div class="mod-menu-body" id="menu-body">
-                    <div class="mod-toggle">
-                        <span>⚡ 2x Speed Multiplier</span>
-                        <input type="checkbox" id="mod-speed" onchange="updateModToggles()">
-                    </div>
-                    <div class="mod-toggle">
-                        <span>🛡️ God Mode (Invincible)</span>
-                        <input type="checkbox" id="mod-god" onchange="updateModToggles()" checked>
-                    </div>
-                    <div class="mod-toggle">
-                        <span>♾️ Infinite Ammo</span>
-                        <input type="checkbox" id="mod-ammo" onchange="updateModToggles()">
-                    </div>
-                    <div class="mod-toggle">
-                        <span>🛸 Noclip / Flight</span>
-                        <input type="checkbox" id="mod-fly" onchange="updateModToggles()">
-                    </div>
-                </div>
+                <b>Controls:</b> Left Click = Select | Drag Gizmo = Move/Scale | Drag Sun Slider in Inspector to change lighting!
             </div>
         </div>
 
-        <!-- Bottom Panel: Scratch-Style Block Coder -->
-        <div class="panel" id="block-coder">
-            <div class="toolbox-palette">
-                <div style="font-weight:bold; color:#aaa; margin-bottom:5px;">Mod Blocks</div>
-                <div class="code-block block-event">⚡ When Trigger Pulled</div>
-                <div class="code-block block-event">🎯 On Collision Enter</div>
-                <div class="code-block block-action">🚀 Set Speed (2x)</div>
-                <div class="code-block block-action">💥 Spawn Explosion</div>
-            </div>
-            
-            <div class="code-canvas">
-                <div class="code-block block-event" style="position:absolute; left:20px; top:20px;">⚡ Event: When Trigger Pulled (Right Hand)</div>
-                <div class="code-block block-action" style="position:absolute; left:20px; top:75px;">🚀 Action: Apply Speed Multiplier = 2.0x</div>
-            </div>
-        </div>
-
-        <!-- Right Panel: Inspector -->
+        <!-- Right Panel: Inspector & Lighting Environment -->
         <div class="panel" id="inspector">
-            <div class="panel-header">Inspector</div>
+            <div class="panel-header">Inspector & Environment</div>
             <div id="inspector-content" style="padding: 10px;">
-                <p style="color: #777; text-align: center; margin-top: 20px;">Select an object in the viewport or hierarchy.</p>
+                <p style="color: #777; text-align: center; margin-top: 20px;">Select an object or check lighting settings.</p>
             </div>
         </div>
 
     </div>
 
-    <script src="app.js"></script>
+    <!-- Game Export & Movement Settings Wizard Modal -->
+    <div id="game-wizard-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>🎮 Game Movement & Physics Wizard</h2>
+            <p style="color:#aaa; margin: 8px 0 15px 0;">Configure how players move inside your created VR game before testing.</p>
+            
+            <label style="font-weight:bold; color:#4ec9b0;">Choose VR Movement Style:</label>
+            <select id="movement-style" style="width:100%; padding:8px; margin:8px 0 15px 0; background:#111; color:#fff; border:1px solid #444;">
+                <option value="gorillatag">Gorilla Tag Style (Hand-Swing Arm Momentum)</option>
+                <option value="joystick">Standard Joystick / Teleport Locomotion</option>
+                <option value="fly">Creative Noclip Flight Mode</option>
+            </select>
+
+            <label style="font-weight:bold; color:#4ec9b0;">World Gravity Strength:</label>
+            <input type="range" id="gravity-slider" min="0" max="20" value="9.8" step="0.5" style="width:100%; margin:8px 0 20px 0;">
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" onclick="closeGameWizard()">Cancel</button>
+                <button class="btn primary" onclick="launchGamePlayMode()">🚀 Launch Game Test</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="engine.js"></script>
 </body>
 </html>
