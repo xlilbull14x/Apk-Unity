@@ -3,91 +3,547 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VR Game Creator Studio (Unity Edition)</title>
-    <!-- Three.js & Controls CDNs -->
+    <title>VR Game Creator Studio - Enterprise Edition</title>
+    <!-- Three.js Library for 3D Viewport -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --bg-panel: #252526;
+            --bg-hover: #2a2d2e;
+            --border-color: #333333;
+            --accent-color: #007acc;
+            --accent-hover: #0098ff;
+            --text-main: #cccccc;
+            --text-bright: #ffffff;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Top Toolbar */
+        #toolbar {
+            height: 40px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+        }
+
+        .logo-area h1 {
+            font-size: 14px;
+            color: var(--text-bright);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .tool-actions, .project-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tool-btn, .action-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 4px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover, .action-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-bright);
+        }
+
+        .tool-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .action-btn.play {
+            background-color: #2ea44f;
+            color: white;
+            border-color: #2ea44f;
+            font-weight: 600;
+        }
+        .action-btn.play:hover {
+            background-color: #2c974b;
+        }
+
+        /* Workspace Grid */
+        #workspace {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 40px);
+            position: relative;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        #right-sidebar {
+            border-right: none;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .panel-section {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-section h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #858585;
+            margin-bottom: 8px;
+        }
+
+        /* Hierarchy & Trees */
+        .tree-list {
+            list-style: none;
+        }
+
+        .tree-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 2px;
+            margin-bottom: 1px;
+        }
+
+        .tree-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-bright);
+        }
+
+        .tree-item.selected {
+            background-color: #37373d;
+            color: var(--text-bright);
+        }
+
+        .tree-item.folder > span {
+            font-weight: bold;
+            color: #9cdcfe;
+        }
+
+        .tree-item ul {
+            list-style: none;
+            padding-left: 15px;
+            margin-top: 2px;
+        }
+
+        /* Asset Grid */
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .asset-card {
+            background: #2d2d2d;
+            border: 1px solid var(--border-color);
+            padding: 12px 8px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: grab;
+            font-size: 12px;
+            color: var(--text-bright);
+            transition: border-color 0.2s;
+        }
+
+        .asset-card:hover {
+            border-color: var(--accent-color);
+        }
+
+        /* Center Viewport Container */
+        #viewport-container {
+            flex: 1;
+            position: relative;
+            background-color: #111111;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #render-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .viewport-overlay-ui {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(30, 30, 30, 0.85);
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 11px;
+            pointer-events: none;
+        }
+
+        /* Bottom Block Coding Drawer / Panel */
+        #code-drawer {
+            height: 220px;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            bottom: 0;
+            left: 260px;
+            right: 260px;
+            transition: height 0.3s ease;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .drawer-header {
+            background: #2d2d2d;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .drawer-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text-bright);
+        }
+
+        .block-workspace-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Block Toolbox Palette */
+        .block-palette {
+            width: 200px;
+            background: #1e1e1e;
+            border-right: 1px solid var(--border-color);
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        .palette-category-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #858585;
+            margin: 6px 0 4px 0;
+        }
+
+        .code-block {
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: grab;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .block-event { background-color: #d97706; } /* Orange */
+        .block-action { background-color: #2563eb; } /* Blue */
+        .block-logic { background-color: #059669; }  /* Green */
+
+        /* Visual Block Dropping Canvas */
+        .block-canvas-dropzone {
+            flex: 1;
+            background: #181818;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+        }
+
+        .dropzone-placeholder {
+            border: 2px dashed #444;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-radius: 6px;
+            font-style: italic;
+        }
+
+        /* Property Inspector Fields */
+        .prop-group {
+            margin-bottom: 10px;
+        }
+
+        .prop-group label {
+            display: block;
+            font-size: 11px;
+            color: #858585;
+            margin-bottom: 4px;
+        }
+
+        .prop-group input[type="text"], 
+        .prop-group input[type="number"] {
+            width: 100%;
+            background: #3c3c3c;
+            border: 1px solid var(--border-color);
+            color: var(--text-bright);
+            padding: 4px 6px;
+            border-radius: 2px;
+            font-size: 12px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+
+        .prop-group input[type="color"] {
+            width: 100%;
+            height: 28px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-
-    <!-- Top Toolbar -->
-    <header>
-        <span class="title">🌌 VR Game Creator (Unity-Engine)</span>
-        <button class="btn primary" onclick="openGameWizard()" id="play-btn">▶ Test Game & Movement</button>
-        <div class="separator"></div>
-        <button class="btn" onclick="spawnObject('cube')">+ Box (Auto-Collider)</button>
-        <button class="btn" onclick="spawnObject('sphere')">+ Sphere (Gravity)</button>
-        <button class="btn" onclick="spawnObject('platform')">+ Platform</button>
-        <div style="flex-grow: 1;"></div>
-        <div id="vr-button-container"></div>
-    </header>
-
-    <!-- Workspace Grid -->
-    <div class="workspace">
+    <div id="app-container">
         
-        <!-- Left Sidebar: Hierarchy & Asset Uploader -->
-        <div class="panel">
-            <div class="tabs">
-                <div class="tab active" onclick="switchTab('hierarchy')">Hierarchy</div>
-                <div class="tab" onclick="switchTab('assets')">Upload Models</div>
+        <!-- Top Application Toolbar -->
+        <header id="toolbar">
+            <div class="logo-area">
+                <h1>VR Game Creator Studio</h1>
             </div>
+            <div class="tool-actions">
+                <button id="btn-select" class="tool-btn active">Select</button>
+                <button id="btn-move" class="tool-btn">Translate</button>
+                <button id="btn-rotate" class="tool-btn">Rotate</button>
+                <button id="btn-scale" class="tool-btn">Scale</button>
+            </div>
+            <div class="project-actions">
+                <button id="btn-play" class="action-btn play">▶ Test in VR</button>
+                <button id="btn-export" class="action-btn">Export Bundle</button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Grid -->
+        <div id="workspace">
             
-            <ul id="hierarchy-list" class="list-container"></ul>
-            
-            <div id="asset-panel" class="asset-container" style="display:none;">
-                <div class="dropzone" onclick="document.getElementById('model-file-input').click()">
-                    <b>📁 Upload 3D Model (.gltf / .obj)</b>
-                    <p style="color:#888; margin-top:4px;">Click to import custom VR assets</p>
-                    <input type="file" id="model-file-input" style="display:none" onchange="uploadModel(event)">
+            <!-- Left Sidebar: Hierarchy & Assets -->
+            <aside id="left-sidebar" class="sidebar">
+                <div class="panel-section">
+                    <h3>Scene Hierarchy</h3>
+                    <ul id="hierarchy-tree" class="tree-list">
+                        <li class="tree-item selected">Main Camera Rig</li>
+                        <li class="tree-item">Directional Sunlight</li>
+                        <li class="tree-item">Infinite Floor Grid</li>
+                        <li class="tree-item folder">
+                            <span>Interactive Actors</span>
+                            <ul>
+                                <li class="tree-item">Grabbable_Cube_01</li>
+                                <li class="tree-item">Teleport_Pad_A</li>
+                            </ul>
+                        </li>
+                    </ul>
                 </div>
-                <div id="upload-status" style="padding: 10px; font-size: 10px; color: #4ec9b0;"></div>
-            </div>
-        </div>
+                <div class="panel-section">
+                    <h3>Asset Library</h3>
+                    <div class="asset-grid">
+                        <div class="asset-card" draggable="true">Cube</div>
+                        <div class="asset-card" draggable="true">Sphere</div>
+                        <div class="asset-card" draggable="true">Cylinder</div>
+                        <div class="asset-card" draggable="true">Portal Node</div>
+                        <div class="asset-card" draggable="true">Audio Source</div>
+                        <div class="asset-card" draggable="true">Custom GLTF</div>
+                    </div>
+                </div>
+            </aside>
 
-        <!-- Center 3D Viewport -->
-        <div id="viewport-container">
-            <canvas id="canvas-3d"></canvas>
-            <div class="viewport-overlay">
-                <b>Controls:</b> Left Click = Select | Drag Gizmo = Move/Scale | Drag Sun Slider in Inspector to change lighting!
-            </div>
-        </div>
+            <!-- Center Viewport -->
+            <main id="viewport-container">
+                <canvas id="render-canvas"></canvas>
+                <div class="viewport-overlay-ui">
+                    <span>Engine: Three.js WebGL Renderer | FPS: 60</span>
+                </div>
 
-        <!-- Right Panel: Inspector & Lighting Environment -->
-        <div class="panel" id="inspector">
-            <div class="panel-header">Inspector & Environment</div>
-            <div id="inspector-content" style="padding: 10px;">
-                <p style="color: #777; text-align: center; margin-top: 20px;">Select an object or check lighting settings.</p>
-            </div>
+                <!-- Embedded Block Coding Drawer Component -->
+                <div id="code-drawer">
+                    <div class="drawer-header" onclick="toggleCodeDrawer()">
+                        <span class="drawer-title">⚡ Visual Logic & Block Scripting Engine</span>
+                        <span>▼ Minimize / Expand</span>
+                    </div>
+                    <div class="block-workspace-body">
+                        <!-- Code Blocks Palette -->
+                        <div class="block-palette">
+                            <div class="palette-category-title">Events</div>
+                            <div class="code-block block-event" draggable="true">When Grabbed by VR Controller</div>
+                            <div class="code-block block-event" draggable="true">When Trigger Clicked</div>
+                            <div class="code-block block-event" draggable="true">On Scene Start</div>
+                            
+                            <div class="palette-category-title">Actions</div>
+                            <div class="code-block block-action" draggable="true">Apply Force Vector</div>
+                            <div class="code-block block-action" draggable="true">Play Sound Effect</div>
+                            <div class="code-block block-action" draggable="true">Change Material Color</div>
+                            <div class="code-block block-action" draggable="true">Teleport Player</div>
+
+                            <div class="palette-category-title">Logic & Flow</div>
+                            <div class="code-block block-logic" draggable="true">If / Else Condition</div>
+                            <div class="code-block block-logic" draggable="true">Repeat Loop (x times)</div>
+                        </div>
+                        <!-- Canvas Dropping Area for Code Blocks -->
+                        <div class="block-canvas-dropzone" id="block-drop-area">
+                            <div class="dropzone-placeholder">Drag visual logic blocks here to build game rules and behaviors...</div>
+                            <!-- Example placed block structure -->
+                            <div class="code-block block-event">When Grabbed by VR Controller ➔</div>
+                            <div class="code-block block-action" style="margin-left: 20px;">Change Material Color (#00ffcc)</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar: Property Inspector -->
+            <aside id="right-sidebar" class="sidebar">
+                <div class="panel-section">
+                    <h3>Object Inspector</h3>
+                    <div id="property-editor">
+                        <div class="prop-group">
+                            <label>Selected Entity</label>
+                            <input type="text" value="Grabbable_Cube_01">
+                        </div>
+                        <div class="prop-group">
+                            <label>Position Vector (X, Y, Z)</label>
+                            <div class="input-row">
+                                <input type="number" value="0.00">
+                                <input type="number" value="1.25">
+                                <input type="number" value="-2.50">
+                            </div>
+                        </div>
+                        <div class="prop-group">
+                            <label>Rotation Euler (X, Y, Z)</label>
+                            <div class="input-row">
+                                <input type="number" value="0">
+                                <input type="number" value="90">
+                                <input type="number" value="0">
+                            </div>
+                        </div>
+                        <div class="prop-group">
+                            <label>Scale Vector (X, Y, Z)</label>
+                            <div class="input-row">
+                                <input type="number" value="1.0">
+                                <input type="number" value="1.0">
+                                <input type="number" value="1.0">
+                            </div>
+                        </div>
+                        <div class="prop-group">
+                            <label>Mesh Material Tint</label>
+                            <input type="color" value="#007acc">
+                        </div>
+                        <div class="prop-group">
+                            <label>Physics Body Type</label>
+                            <input type="text" value="Dynamic RigidBody">
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
         </div>
 
     </div>
 
-    <!-- Game Export & Movement Settings Wizard Modal -->
-    <div id="game-wizard-modal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <h2>🎮 Game Movement & Physics Wizard</h2>
-            <p style="color:#aaa; margin: 8px 0 15px 0;">Configure how players move inside your created VR game before testing.</p>
-            
-            <label style="font-weight:bold; color:#4ec9b0;">Choose VR Movement Style:</label>
-            <select id="movement-style" style="width:100%; padding:8px; margin:8px 0 15px 0; background:#111; color:#fff; border:1px solid #444;">
-                <option value="gorillatag">Gorilla Tag Style (Hand-Swing Arm Momentum)</option>
-                <option value="joystick">Standard Joystick / Teleport Locomotion</option>
-                <option value="fly">Creative Noclip Flight Mode</option>
-            </select>
+    <!-- Core Engine Initialization Script -->
+    <script>
+        // Simple Three.js boilerplate script to run the 3D viewport canvas loop
+        const canvas = document.getElementById('render-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
-            <label style="font-weight:bold; color:#4ec9b0;">World Gravity Strength:</label>
-            <input type="range" id="gravity-slider" min="0" max="20" value="9.8" step="0.5" style="width:100%; margin:8px 0 20px 0;">
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
 
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button class="btn" onclick="closeGameWizard()">Cancel</button>
-                <button class="btn primary" onclick="launchGamePlayMode()">🚀 Launch Game Test</button>
-            </div>
-        </div>
-    </div>
+        const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.set(0, 3, 5);
+        camera.lookAt(0, 0, 0);
 
-    <script src="engine.js"></script>
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        // Add a demo grid floor
+        const gridHelper = new THREE.GridHelper(20, 20, 0x007acc, 0x333333);
+        scene.add(gridHelper);
+
+        // Add a sample cube mesh to the 3D scene
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshStandardMaterial({ color: 0x007acc, roughness: 0.3 });
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(0, 0.5, 0);
+        scene.add(cube);
+
+        // Render loop animation handler
+        function animate() {
+            requestAnimationFrame(animate);
+            cube.rotation.y += 0.005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Window resize responsive handling
+        window.addEventListener('resize', () => {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        // Toggle code drawer drawer functionality
+        let drawerOpen = true;
+        function toggleCodeDrawer() {
+            const drawer = document.getElementById('code-drawer');
+            drawerOpen = !drawerOpen;
+            drawer.style.height = drawerOpen ? '220px' : '32px';
+        }
+    </script>
 </body>
 </html>
