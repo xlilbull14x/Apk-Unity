@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise VR Mod Studio Pro</title>
+    <!-- Three.js & Controls CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Top Toolbar -->
+    <header>
+        <span class="title">⚡ Enterprise VR Mod Studio Pro</span>
+        <button class="btn primary" onclick="togglePlayMode()" id="play-btn">▶ Test Simulation</button>
+        <div class="separator"></div>
+        <button class="btn" onclick="addPrimitive('cube')">+ Spawn Cube</button>
+        <button class="btn" onclick="addPrimitive('sphere')">+ Energy Orb</button>
+        <button class="btn" onclick="addPrimitive('weapon')">+ VR Blaster</button>
+        <div style="flex-grow: 1;"></div>
+        <div id="vr-button-container"></div>
+    </header>
+
+    <!-- Workspace Grid Layout -->
+    <div class="workspace">
+        
+        <!-- Left Sidebar: Hierarchy / APK Injector -->
+        <div class="panel">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('hierarchy')">Hierarchy</div>
+                <div class="tab" onclick="switchTab('apk')">APK Decompiler</div>
+            </div>
+            
+            <ul id="hierarchy-list" class="list-container"></ul>
+            
+            <div id="apk-panel" class="apk-container" style="display:none;">
+                <div class="apk-dropzone" onclick="document.getElementById('apk-file-input').click()">
+                    <b>📱 Upload Quest APK</b>
+                    <p style="color:#888; margin-top:5px;">Click to inject binary file for backend asset parsing</p>
+                    <input type="file" id="apk-file-input" style="display:none" onchange="uploadAPK(event)">
+                </div>
+                <div id="apk-status-log"></div>
+            </div>
+        </div>
+
+        <!-- Center 3D Viewport & Movable VR Cheat Menu -->
+        <div id="viewport-container">
+            <canvas id="canvas-3d"></canvas>
+            
+            <div class="viewport-overlay">
+                <b>Desktop Controls:</b> Click to select | Drag gizmo to transform | WASD/Mouse to Orbit
+            </div>
+
+            <!-- Movable VR In-Game Cheat Menu Overlay -->
+            <div id="vr-mod-menu">
+                <div class="mod-menu-header" id="menu-drag-handle">
+                    <span>🎮 VR Cheat Menu UI</span>
+                    <span style="cursor:pointer;" onclick="toggleMenuCollapse()">_</span>
+                </div>
+                <div class="mod-menu-body" id="menu-body">
+                    <div class="mod-toggle">
+                        <span>⚡ 2x Speed Multiplier</span>
+                        <input type="checkbox" id="mod-speed" onchange="updateModToggles()">
+                    </div>
+                    <div class="mod-toggle">
+                        <span>🛡️ God Mode (Invincible)</span>
+                        <input type="checkbox" id="mod-god" onchange="updateModToggles()" checked>
+                    </div>
+                    <div class="mod-toggle">
+                        <span>♾️ Infinite Ammo</span>
+                        <input type="checkbox" id="mod-ammo" onchange="updateModToggles()">
+                    </div>
+                    <div class="mod-toggle">
+                        <span>🛸 Noclip / Flight</span>
+                        <input type="checkbox" id="mod-fly" onchange="updateModToggles()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel: Scratch-Style Block Coder -->
+        <div class="panel" id="block-coder">
+            <div class="toolbox-palette">
+                <div style="font-weight:bold; color:#aaa; margin-bottom:5px;">Mod Blocks</div>
+                <div class="code-block block-event">⚡ When Trigger Pulled</div>
+                <div class="code-block block-event">🎯 On Collision Enter</div>
+                <div class="code-block block-action">🚀 Set Speed (2x)</div>
+                <div class="code-block block-action">💥 Spawn Explosion</div>
+            </div>
+            
+            <div class="code-canvas">
+                <div class="code-block block-event" style="position:absolute; left:20px; top:20px;">⚡ Event: When Trigger Pulled (Right Hand)</div>
+                <div class="code-block block-action" style="position:absolute; left:20px; top:75px;">🚀 Action: Apply Speed Multiplier = 2.0x</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Inspector -->
+        <div class="panel" id="inspector">
+            <div class="panel-header">Inspector</div>
+            <div id="inspector-content" style="padding: 10px;">
+                <p style="color: #777; text-align: center; margin-top: 20px;">Select an object in the viewport or hierarchy.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
