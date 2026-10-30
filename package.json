@@ -1,16 +1,25 @@
 {
-  "name": "vr-game-creator-engine",
+  "name": "vr-game-creator",
   "version": "1.0.0",
-  "description": "Browser-based Unity VR Game Creator",
+  "description": "Robust VR Game Creator Studio with WebXR and modular architecture",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "engines": {
-    "node": "18.x"
-  }
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "vr",
+    "webxr",
+    "threejs",
+    "game-engine"
+  ],
+  "author": "",
+  "license": "MIT"
 }
