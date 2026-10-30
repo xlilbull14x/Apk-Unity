@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VR & PC Game Creator Studio - Fully Interactive Edition</title>
+    <title>VR & PC Game Creator Studio - AI & Export Edition</title>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -34,6 +34,8 @@
         .action-btn.play { background-color: #2ea44f; color: white; border-color: #2ea44f; font-weight: 600; }
         .action-btn.play:hover { background-color: #2c974b; }
         .action-btn.code { background-color: var(--accent-color); color: white; border-color: var(--accent-color); font-weight: 600; }
+        .action-btn.ai { background-color: #8b5cf6; color: white; border-color: #8b5cf6; font-weight: 600; }
+        .action-btn.ai:hover { background-color: #7c3aed; }
 
         /* Workspace Grid */
         #workspace { display: flex; flex: 1; height: calc(100vh - 40px); position: relative; }
@@ -43,12 +45,10 @@
         .panel-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #858585; margin-bottom: 8px; }
 
         /* Hierarchy & Trees */
-        .tree-list { list-style: none; }
-        .tree-item { padding: 4px 8px; cursor: pointer; border-radius: 2px; margin-bottom: 1px; }
+        .tree-list { list-style: none; max-height: 180px; overflow-y: auto; }
+        .tree-item { padding: 4px 8px; cursor: pointer; border-radius: 2px; margin-bottom: 1px; color: var(--text-main); }
         .tree-item:hover { background-color: var(--bg-hover); color: var(--text-bright); }
-        .tree-item.selected { background-color: #37373d; color: var(--text-bright); }
-        .tree-item.folder > span { font-weight: bold; color: #9cdcfe; }
-        .tree-item ul { list-style: none; padding-left: 15px; margin-top: 2px; }
+        .tree-item.selected { background-color: #37373d; color: var(--text-bright); font-weight: bold; }
 
         /* Asset Grid */
         .asset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
@@ -66,6 +66,13 @@
         .prop-group input[type="text"], .prop-group input[type="number"] { width: 100%; background: #3c3c3c; border: 1px solid var(--border-color); color: var(--text-bright); padding: 4px 6px; border-radius: 2px; font-size: 12px; }
         .input-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
         .prop-group input[type="color"] { width: 100%; height: 28px; background: transparent; border: 1px solid var(--border-color); cursor: pointer; }
+
+        /* AI ASSISTANT PANEL IN RIGHT SIDEBAR */
+        .ai-chat-box { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+        .ai-chat-input { width: 100%; background: #2d2d2d; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-size: 12px; }
+        .ai-send-btn { background: #8b5cf6; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .ai-send-btn:hover { background: #7c3aed; }
+        .ai-output-log { background: #161616; border: 1px solid var(--border-color); padding: 6px; border-radius: 4px; font-size: 11px; color: #a78bfa; max-height: 80px; overflow-y: auto; }
 
         /* FULL-SCREEN BLOCK CODE TAB OVERLAY */
         #code-fullscreen-tab {
@@ -105,7 +112,7 @@
         <!-- Top Toolbar -->
         <header id="toolbar">
             <div class="logo-area">
-                <h1>VR / PC Game Creator Studio</h1>
+                <h1>VR & PC Game Creator Studio</h1>
             </div>
             <div class="tool-actions">
                 <button id="btn-select" class="tool-btn active" data-tool="select">Select</button>
@@ -115,8 +122,8 @@
             </div>
             <div class="project-actions">
                 <button id="btn-toggle-code" class="action-btn code" onclick="toggleCodeTab()">⚡ Open Block Code Tab</button>
+                <button id="btn-export" class="action-btn" onclick="exportProject()">📥 Export Project</button>
                 <button id="btn-play" class="action-btn play">▶ Test Game</button>
-                <button id="btn-export" class="action-btn">Export</button>
             </div>
         </header>
 
@@ -127,9 +134,7 @@
                 <div class="panel-section">
                     <h3>Scene Hierarchy</h3>
                     <ul id="hierarchy-tree" class="tree-list">
-                        <li class="tree-item selected" data-id="cube">Grabbable_Cube_01</li>
-                        <li class="tree-item">Directional Sunlight</li>
-                        <li class="tree-item">Infinite Floor Grid</li>
+                        <!-- Populated dynamically -->
                     </ul>
                 </div>
                 <div class="panel-section">
@@ -138,8 +143,8 @@
                         <div class="asset-card" onclick="spawnAsset('cube')">Cube</div>
                         <div class="asset-card" onclick="spawnAsset('sphere')">Sphere</div>
                         <div class="asset-card" onclick="spawnAsset('cylinder')">Cylinder</div>
-                        <div class="asset-card" onclick="alert('Portal Node added!')">Portal Node</div>
-                        <div class="asset-card" onclick="alert('Audio Source added!')">Audio Source</div>
+                        <div class="asset-card" onclick="spawnAsset('portal')">Portal Node</div>
+                        <div class="asset-card" onclick="spawnAsset('light')">Point Light</div>
                         <div class="asset-card" onclick="alert('Custom GLTF model importer placeholder.')">Custom GLTF</div>
                     </div>
                 </div>
@@ -160,36 +165,46 @@
                     <div id="property-editor">
                         <div class="prop-group">
                             <label>Selected Entity</label>
-                            <input type="text" id="prop-name" value="Grabbable_Cube_01">
+                            <input type="text" id="prop-name" value="">
                         </div>
                         <div class="prop-group">
                             <label>Position Vector (X, Y, Z)</label>
                             <div class="input-row">
-                                <input type="number" id="pos-x" value="0.00" step="0.1">
-                                <input type="number" id="pos-y" value="0.50" step="0.1">
-                                <input type="number" id="pos-z" value="-3.00" step="0.1">
+                                <input type="number" id="pos-x" value="0" step="0.1">
+                                <input type="number" id="pos-y" value="0" step="0.1">
+                                <input type="number" id="pos-z" value="0" step="0.1">
                             </div>
                         </div>
                         <div class="prop-group">
                             <label>Rotation Euler (X, Y, Z)</label>
                             <div class="input-row">
                                 <input type="number" id="rot-x" value="0" step="5">
-                                <input type="number" id="rot-y" value="45" step="5">
+                                <input type="number" id="rot-y" value="0" step="5">
                                 <input type="number" id="rot-z" value="0" step="5">
                             </div>
                         </div>
                         <div class="prop-group">
                             <label>Scale Vector (X, Y, Z)</label>
                             <div class="input-row">
-                                <input type="number" id="scale-x" value="1.0" step="0.1">
-                                <input type="number" id="scale-y" value="1.0" step="0.1">
-                                <input type="number" id="scale-z" value="1.0" step="0.1">
+                                <input type="number" id="scale-x" value="1" step="0.1">
+                                <input type="number" id="scale-y" value="1" step="0.1">
+                                <input type="number" id="scale-z" value="1" step="0.1">
                             </div>
                         </div>
                         <div class="prop-group">
                             <label>Mesh Material Tint</label>
                             <input type="color" id="prop-color" value="#007acc">
                         </div>
+                    </div>
+                </div>
+
+                <!-- AI ASSISTANT PANEL -->
+                <div class="panel-section">
+                    <h3>🤖 AI Building Assistant</h3>
+                    <div class="ai-chat-box">
+                        <input type="text" id="ai-prompt-input" class="ai-chat-input" placeholder="e.g. Build a red glowing wall...">
+                        <button class="ai-send-btn" onclick="runAIAssistant()">Generate with AI</button>
+                        <div id="ai-log" class="ai-output-log">Ready for AI prompts...</div>
                     </div>
                 </div>
             </aside>
@@ -258,45 +273,65 @@
         let selectedObject = null;
         const objectsInScene = [];
 
-        // Spawn Default Cube
+        // Spawn Initial Cube
         const defaultGeometry = new THREE.BoxGeometry(1, 1, 1);
         const defaultMaterial = new THREE.MeshStandardMaterial({ color: 0x007acc, roughness: 0.3 });
-        const cube = new THREE.Mesh(defaultGeometry, defaultMaterial);
-        cube.position.set(0, 0.5, -3);
-        cube.name = "Grabbable_Cube_01";
-        scene.add(cube);
-        objectsInScene.push(cube);
-        selectObject(cube);
+        const initialCube = new THREE.Mesh(defaultGeometry, defaultMaterial);
+        initialCube.position.set(0, 0.5, -3);
+        initialCube.name = "Grabbable_Cube_01";
+        scene.add(initialCube);
+        objectsInScene.push(initialCube);
+
+        function rebuildHierarchyUI() {
+            const treeList = document.getElementById('hierarchy-tree');
+            treeList.innerHTML = '';
+            objectsInScene.forEach((obj) => {
+                const li = document.createElement('li');
+                li.className = 'tree-item' + (selectedObject === obj ? ' selected' : '');
+                li.textContent = obj.name;
+                li.onclick = () => {
+                    selectObject(obj);
+                    rebuildHierarchyUI();
+                };
+                treeList.appendChild(li);
+            });
+        }
+
+        selectObject(initialCube);
+        rebuildHierarchyUI();
 
         // Function to Spawn Assets from Library
         function spawnAsset(type) {
-            let geometry;
+            let geometry, material;
             if (type === 'cube') geometry = new THREE.BoxGeometry(1, 1, 1);
             else if (type === 'sphere') geometry = new THREE.SphereGeometry(0.7, 32, 32);
             else if (type === 'cylinder') geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+            else if (type === 'portal') geometry = new THREE.TorusGeometry(0.8, 0.1, 16, 100);
+            else if (type === 'light') {
+                const lightMesh = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
+                const pLight = new THREE.PointLight(0xffff00, 2, 10);
+                lightMesh.add(pLight);
+                geometry = null;
+                material = null;
+                var customObj = lightMesh;
+            }
 
-            const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.3 });
-            const mesh = new THREE.Mesh(geometry, material);
+            if (!customObj) {
+                material = new THREE.MeshStandardMaterial({ color: Math.floor(Math.random()*16777215), roughness: 0.3 });
+                customObj = new THREE.Mesh(geometry, material);
+            }
             
-            // Spawn directly in front of camera view
             const camDir = new THREE.Vector3();
             camera.getWorldDirection(camDir);
-            mesh.position.copy(camera.position).addScaledVector(camDir, 4);
-            mesh.position.y = Math.max(0.5, mesh.position.y);
+            customObj.position.copy(camera.position).addScaledVector(camDir, 4);
+            customObj.position.y = Math.max(0.5, customObj.position.y);
 
-            mesh.name = type.charAt(0).toUpperCase() + type.slice(1) + "_" + (objectsInScene.length + 1);
-            scene.add(mesh);
-            objectsInScene.push(mesh);
+            customObj.name = type.charAt(0).toUpperCase() + type.slice(1) + "_" + (objectsInScene.length + 1);
+            scene.add(customObj);
+            objectsInScene.push(customObj);
 
-            // Add to Hierarchy UI List
-            const treeList = document.getElementById('hierarchy-tree');
-            const li = document.createElement('li');
-            li.className = 'tree-item';
-            li.textContent = mesh.name;
-            li.onclick = () => selectObject(mesh);
-            treeList.appendChild(li);
-
-            selectObject(mesh);
+            selectObject(customObj);
+            rebuildHierarchyUI();
         }
 
         // Selection Handler
@@ -304,6 +339,7 @@
             selectedObject = obj;
             document.getElementById('prop-name').value = obj.name;
             updateInspectorInputs();
+            rebuildHierarchyUI();
         }
 
         function updateInspectorInputs() {
@@ -326,8 +362,17 @@
         }
 
         // Live Inspector Input Bindings
-        document.getElementById('prop-name').addEventListener('input', (e) => { if (selectedObject) selectedObject.name = e.target.value; });
-        document.getElementById('prop-color').addEventListener('input', (e) => { if (selectedObject && selectedObject.material) selectedObject.material.color.set(e.target.value); });
+        document.getElementById('prop-name').addEventListener('input', (e) => { 
+            if (selectedObject) {
+                selectedObject.name = e.target.value;
+                rebuildHierarchyUI();
+            }
+        });
+        document.getElementById('prop-color').addEventListener('input', (e) => { 
+            if (selectedObject && selectedObject.material && selectedObject.material.color) {
+                selectedObject.material.color.set(e.target.value);
+            }
+        });
 
         ['x', 'y', 'z'].forEach(axis => {
             document.getElementById(`pos-${axis}`).addEventListener('input', (e) => {
@@ -340,6 +385,79 @@
                 if (selectedObject) selectedObject.scale[axis] = parseFloat(e.target.value) || 1;
             });
         });
+
+        // FULLY WORKING EXPORT FUNCTION
+        function exportProject() {
+            const projectData = {
+                title: "VR Game Creator Studio Project",
+                timestamp: new Date().toISOString(),
+                objects: objectsInScene.map(obj => ({
+                    name: obj.name,
+                    type: obj.geometry ? obj.geometry.type : "Group",
+                    position: [obj.position.x, obj.position.y, obj.position.z],
+                    rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
+                    scale: [obj.scale.x, obj.scale.y, obj.scale.z],
+                    color: obj.material && obj.material.color ? '#' + obj.material.color.getHexString() : '#ffffff'
+                }))
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "vr_game_creator_project.json");
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            dlAnchorElem.remove();
+            alert("Project successfully exported as vr_game_creator_project.json!");
+        }
+
+        // AI ASSISTANT BUILDER LOGIC
+        function runAIAssistant() {
+            const prompt = document.getElementById('ai-prompt-input').value.toLowerCase();
+            const log = document.getElementById('ai-log');
+            if (!prompt) return;
+
+            log.innerHTML = `🤖 Processing: "${prompt}"...`;
+            
+            setTimeout(() => {
+                let geom = new THREE.BoxGeometry(2, 2, 2);
+                let col = 0xff5533;
+                let name = "AI_Generated_Object";
+
+                if (prompt.includes('wall') || prompt.includes('barrier')) {
+                    geom = new THREE.BoxGeometry(5, 3, 0.5);
+                    name = "AI_Wall";
+                } else if (prompt.includes('sphere') || prompt.includes('ball')) {
+                    geom = new THREE.SphereGeometry(1.2, 32, 32);
+                    name = "AI_Sphere";
+                } else if (prompt.includes('pillar') || prompt.includes('column')) {
+                    geom = new THREE.CylinderGeometry(0.6, 0.6, 4, 32);
+                    name = "AI_Pillar";
+                }
+
+                if (prompt.includes('green')) col = 0x22c55e;
+                if (prompt.includes('blue')) col = 0x3b82f6;
+                if (prompt.includes('red')) col = 0xef4444;
+                if (prompt.includes('gold') || prompt.includes('yellow')) col = 0xeab308;
+
+                const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.2 });
+                const mesh = new THREE.Mesh(geom, mat);
+
+                const camDir = new THREE.Vector3();
+                camera.getWorldDirection(camDir);
+                mesh.position.copy(camera.position).addScaledVector(camDir, 6);
+                mesh.position.y = 1;
+
+                mesh.name = name + "_" + (objectsInScene.length + 1);
+                scene.add(mesh);
+                objectsInScene.push(mesh);
+                selectObject(mesh);
+                rebuildHierarchyUI();
+
+                log.innerHTML = `✨ Successfully built & added "${mesh.name}" to the scene!`;
+                document.getElementById('ai-prompt-input').value = '';
+            }, 600);
+        }
 
         // Toolbar Tool Switcher
         const toolButtons = document.querySelectorAll('.tool-btn');
