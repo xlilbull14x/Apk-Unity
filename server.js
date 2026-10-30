@@ -1,34 +1,31 @@
+/**
+ * VR Game Creator Studio - Backend Express Server
+ */
 const express = require('express');
 const path = require('path');
-const multer = require('multer');
-const fs = require('fs');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-const upload = multer({ dest: uploadDir });
-
-app.use(express.static(path.join(__dirname, 'public')));
+// Middleware to parse JSON and urlencoded data
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Endpoint for uploading 3D models / assets
-app.post('/api/upload-model', upload.single('modelFile'), (req, res) => {
-    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded.' });
-    
-    res.json({
-        success: true,
-        filename: req.file.originalname,
-        path: `/uploads/${req.file.filename}`
-    });
-});
+// Serve static files from the 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('*', (req, res) => {
+// Root route handler
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// API status check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'online', engine: 'VR Game Creator Studio', timestamp: new Date() });
+});
+
+// Start server
 app.listen(PORT, () => {
-    console.log(`🌐 VR Game Creator Engine running on port ${PORT}`);
+    console.log(`🚀 VR Game Creator server is running live at http://localhost:${PORT}`);
 });
