@@ -1,8 +1,12 @@
 services:
   - type: web
-    name: vr-game-creator
+    name: vr-game-creator-studio
     env: node
     plan: free
     buildCommand: npm install
     startCommand: npm start
-    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
