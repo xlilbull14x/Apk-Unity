@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: vr-mod-studio-pro
+    name: vr-game-creator
     env: node
     plan: free
     buildCommand: npm install
