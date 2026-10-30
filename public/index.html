@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VR & PC Game Creator Studio - Full Monolith Edition</title>
+    <title>VR & PC Game Creator Studio - Shiftlock Edition</title>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -57,7 +57,7 @@
 
         /* Center Viewport */
         #viewport-container { flex: 1; position: relative; background-color: #111111; display: flex; flex-direction: column; }
-        #render-canvas { width: 100%; height: 100%; display: block; outline: none; }
+        #render-canvas { width: 100%; height: 100%; display: block; outline: none; cursor: crosshair; }
         .viewport-overlay-ui { position: absolute; top: 12px; left: 12px; background: rgba(30, 30, 30, 0.85); padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 11px; pointer-events: none; color: #9cdcfe; }
 
         /* Property Inspector */
@@ -127,7 +127,7 @@
                 <div class="panel-section">
                     <h3>Scene Hierarchy</h3>
                     <ul id="hierarchy-tree" class="tree-list">
-                        <li class="tree-item selected">Player Camera (WASD / Mouse)</li>
+                        <li class="tree-item selected">Player Camera (WASD / Mouse Lock)</li>
                         <li class="tree-item">Directional Sunlight</li>
                         <li class="tree-item">Infinite Floor Grid</li>
                         <li class="tree-item folder">
@@ -156,7 +156,7 @@
             <main id="viewport-container">
                 <canvas id="render-canvas" tabindex="1"></canvas>
                 <div class="viewport-overlay-ui">
-                    <span>Controls: WASD to Move | Click & Drag to Look Around</span>
+                    <span>Click canvas to lock mouse (Shiftlock) | WASD to Move | Space/Shift for Up/Down</span>
                 </div>
             </main>
 
@@ -240,7 +240,7 @@
         </div>
     </div>
 
-    <!-- Complete Engine Script with PC Movement & VR Support -->
+    <!-- Complete Engine Script with Shiftlock & Corrected Strafe -->
     <script>
         // Toggle Fullscreen Code Tab
         function toggleCodeTab() {
@@ -248,7 +248,7 @@
             tab.classList.toggle('active');
         }
 
-        // Three.js 3D Viewport & PC Camera Movement Setup
+        // Three.js 3D Viewport & PC Camera Setup
         const canvas = document.getElementById('render-canvas');
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(canvas.clientWidth, canvas.clientHeight);
@@ -279,43 +279,23 @@
         cube.name = "Grabbable_Cube_01";
         scene.add(cube);
 
-        // PC Movement Mechanics (WASD & Mouse Look)
-        const moveState = { forward: false, backward: false, left: false, right: false };
-        let isMouseDown = false;
-        let mouseX = 0, mouseY = 0;
+        // Roblox Shiftlock & WASD Movement Mechanics
+        const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
         let cameraRotationX = 0, cameraRotationY = 0;
 
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'w' || e.key === 'W') moveState.forward = true;
-            if (e.key === 's' || e.key === 'S') moveState.backward = true;
-            if (e.key === 'a' || e.key === 'A') moveState.left = true;
-            if (e.key === 'd' || e.key === 'D') moveState.right = true;
+        // Click canvas to trigger Roblox-style Pointer Lock (Shiftlock)
+        canvas.addEventListener('click', () => {
+            canvas.requestPointerLock();
         });
 
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'w' || e.key === 'W') moveState.forward = false;
-            if (e.key === 's' || e.key === 'S') moveState.backward = false;
-            if (e.key === 'a' || e.key === 'A') moveState.left = false;
-            if (e.key === 'd' || e.key === 'D') moveState.right = false;
-        });
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement !== canvas) return; // Only look around when locked
 
-        canvas.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
+            const sensitivity = 0.002;
+            cameraRotationY -= e.movementX * sensitivity;
+            cameraRotationX -= e.movementY * sensitivity;
 
-        window.addEventListener('mouseup', () => { isMouseDown = false; });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isMouseDown) return;
-            const deltaX = e.clientX - mouseX;
-            const deltaY = e.clientY - mouseY;
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-
-            cameraRotationY -= deltaX * 0.003;
-            cameraRotationX -= deltaY * 0.003;
+            // Clamp vertical camera angle so you don't flip upside down
             cameraRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotationX));
 
             camera.rotation.order = 'YXZ';
@@ -323,23 +303,42 @@
             camera.rotation.x = cameraRotationX;
         });
 
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'w' || e.key === 'W') moveState.forward = true;
+            if (e.key === 's' || e.key === 'S') moveState.backward = true;
+            if (e.key === 'a' || e.key === 'A') moveState.left = true;   // Fixed: A is left
+            if (e.key === 'd' || e.key === 'D') moveState.right = true;  // Fixed: D is right
+            if (e.key === ' ' ) moveState.up = true;                     // Space to move up
+            if (e.key === 'Shift') moveState.down = true;                // Shift to move down
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'w' || e.key === 'W') moveState.forward = false;
+            if (e.key === 's' || e.key === 'S') moveState.backward = false;
+            if (e.key === 'a' || e.key === 'A') moveState.left = false;
+            if (e.key === 'd' || e.key === 'D') moveState.right = false;
+            if (e.key === ' ' ) moveState.up = false;
+            if (e.key === 'Shift') moveState.down = false;
+        });
+
         // Animation & Movement Loop
         function animate() {
             requestAnimationFrame(animate);
 
-            // Calculate movement velocity vector based on WASD
-            const speed = 0.08;
+            const speed = 0.1;
             const direction = new THREE.Vector3();
             camera.getWorldDirection(direction);
-            direction.y = 0; // Keep movement locked to ground plane
+            direction.y = 0; // Keep forward/backward locked to horizontal plane
             direction.normalize();
 
             const sideDirection = new THREE.Vector3(-direction.z, 0, direction.x);
 
             if (moveState.forward) camera.position.addScaledVector(direction, speed);
             if (moveState.backward) camera.position.addScaledVector(direction, -speed);
-            if (moveState.left) camera.position.addScaledVector(sideDirection, speed);
-            if (moveState.right) camera.position.addScaledVector(sideDirection, -speed);
+            if (moveState.left) camera.position.addScaledVector(sideDirection, -speed); // Corrected strafe left
+            if (moveState.right) camera.position.addScaledVector(sideDirection, speed);  // Corrected strafe right
+            if (moveState.up) camera.position.y += speed;
+            if (moveState.down) camera.position.y -= speed;
 
             cube.rotation.y += 0.005;
             renderer.render(scene, camera);
